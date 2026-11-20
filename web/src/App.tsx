@@ -108,9 +108,13 @@ export default function App() {
           >
             Shopify : {lastSync ? `${fmtDays(syncAge)}${lastSync.status !== "ok" ? " (échec)" : ""}` : "jamais"}
           </span>
-          <button className="link me" title="Changer mon mot de passe" onClick={changePassword}>
-            {team.find((m) => m.email === me)?.display_name}
-          </button>
+          {session.user.app_metadata?.provider === "email" ? (
+            <button className="link me" title="Changer mon mot de passe" onClick={changePassword}>
+              {team.find((m) => m.email === me)?.display_name}
+            </button>
+          ) : (
+            <span className="me">{team.find((m) => m.email === me)?.display_name}</span>
+          )}
           <button className="btn ghost small" onClick={() => supabase.auth.signOut()}>
             Déconnexion
           </button>

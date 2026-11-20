@@ -1,6 +1,6 @@
 # CRM Revendeurs — Les Imprimeuses
 
-Outil interne pour suivre les revendeurs B2B : qui a commandé quoi, quand on leur a parlé pour la dernière fois, qui relancer. Réservé à l'équipe (Benjamin, Violette, Lauriane).
+Outil interne pour suivre les revendeurs B2B : qui a commandé quoi, quand on leur a parlé pour la dernière fois, qui relancer. Réservé à l'équipe (Benjamin, Violette, Lauriane), qui se connecte avec son compte Google.
 
 ```
 Shopify ──(chaque nuit, GitHub Actions)──▶ Supabase (base de données) ◀── Netlify (l'application web)
@@ -41,7 +41,7 @@ Le segment est calculé par la vue SQL `account_overview` à la date du jour. Le
 
 ---
 
-## Installation (une seule fois, environ 45 minutes)
+## Installation (une seule fois, environ 1 heure)
 
 ### 1. Supabase (la base de données)
 
@@ -54,11 +54,31 @@ Le segment est calculé par la vue SQL `account_overview` à la date du jour. Le
      ('violette@…', 'Violette'),
      ('lauriane@…', 'Lauriane');
    ```
-4. **Authentication > Sign In / Providers** : désactiver **Allow new users to sign up**. Seules les personnes créées à la main pourront se connecter.
-5. **Authentication > Users > Add user > Create new user** : pour chacune des 3 adresses, saisir un mot de passe provisoire et cocher **Auto Confirm User**. Chacune pourra changer son mot de passe en cliquant sur son prénom en haut à droite de l'application.
-6. **Project Settings > API** (ou le bouton **Connect**) : noter l'**URL du projet** et la clé **anon** (ou *publishable*), pour l'étape 4.
+4. **Project Settings > API** (ou le bouton **Connect**) : noter l'**URL du projet** (`https://xxxx.supabase.co`) et la clé **anon** (ou *publishable*), pour les étapes 1 bis et 4.
 
-> **Connexion par lien e-mail** (« mot de passe oublié ») : sans réglage, Supabase n'envoie d'e-mails qu'aux membres de l'organisation Supabase, avec un débit très limité. Pour que Violette et Lauriane puissent recevoir un lien, soit les inviter dans l'organisation Supabase, soit configurer un serveur d'envoi dans **Authentication > Emails > SMTP Settings** (Brevo ou Resend en gratuit, ou le SMTP de Google Workspace). La connexion par mot de passe, elle, fonctionne sans rien régler.
+### 1 bis. Connexion avec Google (environ 10 minutes)
+
+On se connecte au CRM avec son compte Google `@lesimprimeuses.com` : pas de mot de passe supplémentaire.
+
+1. Sur <https://console.cloud.google.com>, avec un compte administrateur de votre Google Workspace, créer un projet, par exemple `crm-imprimeuses`.
+2. **Google Auth Platform** (ou *API et services > Écran de consentement OAuth*) :
+   - nom de l'application : « CRM Revendeurs », avec votre adresse de contact ;
+   - **Audience : Interne**. C'est le réglage clé : seuls les comptes de votre Workspace peuvent se connecter, et Google n'exige aucune validation.
+3. **Clients > Créer un client** :
+   - type : **Application Web** ;
+   - **URI de redirection autorisés** : `https://xxxx.supabase.co/auth/v1/callback`, avec l'URL de votre projet Supabase.
+
+   Noter l'**ID client** et le **Code secret du client**.
+4. Dans Supabase > **Authentication > Sign In / Providers > Google** : activer, coller l'ID client et le code secret, puis enregistrer.
+5. Toujours dans **Sign In / Providers** : laisser **Allow new users to sign up** activé (Google en a besoin pour la première connexion de chacune), et **désactiver le fournisseur Email** si vous n'utilisez que Google.
+
+**Qui peut entrer ?** Deux verrous :
+- Google n'accepte que les comptes de votre Workspace, grâce à l'audience « Interne ».
+- Le CRM n'affiche des données qu'aux adresses inscrites dans `team_members`. Un autre compte du Workspace voit « Accès non autorisé », et la base lui refuse tout.
+
+Pour ajouter ou retirer quelqu'un, il suffit de modifier `team_members`.
+
+> **Si Violette ou Lauriane n'ont pas de compte Google `@lesimprimeuses.com`** : choisir l'audience « Externe » en mode test et ajouter leurs adresses Gmail comme utilisateurs test. Autre solution : laisser le fournisseur Email activé et leur créer un compte avec mot de passe (**Authentication > Users > Add user > Create new user**, cocher **Auto Confirm User**). Elles utiliseront alors le lien « Se connecter sans Google ».
 
 ### 2. Shopify (l'accès en lecture aux commandes)
 
@@ -92,7 +112,7 @@ Puis **Actions > Synchro Shopify > Run workflow** pour lancer une première sync
    - `VITE_SUPABASE_URL` = l'URL du projet Supabase
    - `VITE_SUPABASE_ANON_KEY` = la clé anon / publishable
 3. **Deploy**. On peut renommer le site, par exemple `crm-imprimeuses.netlify.app`.
-4. Dans Supabase > **Authentication > URL Configuration**, mettre l'adresse Netlify dans **Site URL**. C'est nécessaire pour les liens de connexion par e-mail.
+4. Dans Supabase > **Authentication > URL Configuration**, mettre l'adresse Netlify dans **Site URL**, et ajouter `https://<votre-site>.netlify.app/**` dans **Redirect URLs**. Sans cela, après la connexion Google, on revient sur une mauvaise adresse.
 
 La clé « anon » est publique par nature. Ce sont les règles de sécurité de la base (RLS) qui protègent les données : sans être connecté avec une adresse de `team_members`, on ne voit rien.
 

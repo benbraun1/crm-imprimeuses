@@ -237,3 +237,5 @@ tr.cancelled td { text-decoration: line-through; color: var(--muted); }
   .col-channel, .col-nb_orders, .col-owner_email { display: none; }
   th, td { padding: 8px; }
 }
+
+.btn.google { justify-content: center; padding: 10px 14px; font-weight: 500; }
